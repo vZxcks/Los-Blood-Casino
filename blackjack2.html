@@ -10,28 +10,24 @@
 
 <h1 class="text-4xl font-bold mb-6">Blackjack 2</h1>
 
-<div class="flex flex-col md:flex-row w-full max-w-6xl gap-6">
-
-  <div class="flex-1 bg-gray-800 p-6 rounded-xl shadow-lg">
-    <h2 class="text-2xl font-semibold mb-4">Jugadores y apuestas</h2>
-    <div id="playersList" class="space-y-4">
-      <div class="flex gap-2">
-        <input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
-        <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">
-      </div>
+<div class="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-4xl mb-6">
+  <h2 class="text-2xl font-semibold mb-4">Jugadores y apuestas</h2>
+  <div id="playersList" class="space-y-4">
+    <div class="flex gap-2 items-center">
+      <input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
+      <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">
     </div>
-    <button onclick="addPlayer()" class="w-full bg-blue-600 p-2 rounded hover:bg-blue-700 mt-2">Agregar jugador</button>
-    <button onclick="startGame()" class="w-full bg-green-600 p-3 rounded hover:bg-green-700 mt-4">Iniciar Juego</button>
   </div>
-
-  <div class="flex-1 bg-gray-800 p-6 rounded-xl shadow-lg" id="gameContainer"></div>
-
+  <button onclick="addPlayer()" class="bg-blue-600 p-2 rounded hover:bg-blue-700 mt-2">Agregar jugador</button>
+  <button onclick="startGame()" class="bg-green-600 p-3 rounded hover:bg-green-700 mt-4 w-full">Iniciar Juego</button>
 </div>
+
+<div id="gameContainer" class="w-full max-w-4xl"></div>
 
 <script>
 const suits=["♠","♥","♦","♣"];
 const values=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-let deck=[], players=[], dealerHand=[];
+let deck=[], players=[], dealerHand=[], currentPlayer=0;
 
 function createDeck(){
   deck=[];
@@ -57,47 +53,92 @@ function calculateScore(hand){
   return score;
 }
 
+function deckPop(){
+  if(deck.length===0) createDeck();
+  return deck.pop();
+}
+
 function addPlayer(){
-  const container=document.getElementById("playersList");
-  if(container.children.length>=5) return alert("Máximo 5 jugadores");
+  if(document.getElementById("playersList").children.length>=5) return alert("Máximo 5 jugadores");
   const div=document.createElement("div");
-  div.className="flex gap-2";
+  div.className="flex gap-2 items-center";
   div.innerHTML=`<input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
-                   <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">`;
-  container.appendChild(div);
+                 <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">`;
+  document.getElementById("playersList").appendChild(div);
 }
 
 function startGame(){
+  createDeck();
   players=[];
   const names=document.getElementsByClassName("playerName");
   const bets=document.getElementsByClassName("playerBet");
   for(let i=0;i<names.length;i++){
     const name=names[i].value||`Jugador${i+1}`;
     const bet=parseInt(bets[i].value)||100;
-    players.push({name:name, bet:bet, hand:[deckPop(),deckPop()]});
+    players.push({name:name, bet:bet, hand:[deckPop(),deckPop()], finished:false});
   }
   dealerHand=[deckPop(),deckPop()];
+  currentPlayer=0;
   showGame();
 }
 
-function deckPop(){
-  if(deck.length===0) createDeck();
-  return deck.pop();
+function hit(){
+  players[currentPlayer].hand.push(deckPop());
+  if(calculateScore(players[currentPlayer].hand)>21){
+    stand();
+  } else {
+    showGame();
+  }
 }
 
-function showGame(){
+function stand(){
+  players[currentPlayer].finished=true;
+  currentPlayer++;
+  if(currentPlayer>=players.length){
+    dealerTurn();
+  } else {
+    showGame();
+  }
+}
+
+function dealerTurn(){
+  while(calculateScore(dealerHand)<17){
+    dealerHand.push(deckPop());
+  }
+  showGame(true);
+  setTimeout(()=>resolveGame(),200);
+}
+
+function resolveGame(){
+  const dealerScore=calculateScore(dealerHand);
+  let results="";
+  players.forEach(p=>{
+    const score=calculateScore(p.hand);
+    if(score>21) results+=`${p.name}: Perdiste\n`;
+    else if(dealerScore>21 || score>dealerScore) results+=`${p.name}: Ganaste\n`;
+    else if(score===dealerScore) results+=`${p.name}: Empate\n`;
+    else results+=`${p.name}: Perdiste\n`;
+  });
+  alert(results);
+}
+
+function showGame(turnOver=false){
   const container=document.getElementById("gameContainer");
   let html="";
-  for(let p of players){
+  players.forEach((p,i)=>{
     const score=calculateScore(p.hand);
-    html+=`<h2 class="text-xl font-semibold mb-2">${p.name}</h2>
-           <div class="flex space-x-2 mb-2">${p.hand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
-           <p class="text-lg mb-2">Puntaje: ${score} - Apuesta: $${p.bet}</p>`;
-  }
+    html+=`<h2 class="text-xl font-semibold mt-2">${p.name} - Apuesta: $${p.bet}</h2>
+           <div class="flex gap-2 mb-2 mt-1">${p.hand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+           <p>Puntaje: ${score}</p>`;
+    if(i===currentPlayer && !turnOver){
+      html+=`<button onclick="hit()" class="bg-green-600 p-2 rounded m-2 hover:bg-green-700">Pedir</button>
+             <button onclick="stand()" class="bg-red-600 p-2 rounded m-2 hover:bg-red-700">Plantarse</button>`;
+    }
+  });
   const dealerScore=calculateScore(dealerHand);
-  html+=`<h2 class="text-xl font-semibold mb-2">Crupier</h2>
-         <div class="flex space-x-2 mb-2">${dealerHand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
-         <p class="text-lg">Puntaje: ${dealerScore}</p>`;
+  html+=`<h2 class="text-xl font-semibold mt-4">Crupier</h2>
+         <div class="flex gap-2 mb-2 mt-1">${dealerHand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+         <p>Puntaje: ${turnOver?dealerScore:'?'}</p>`;
   container.innerHTML=html;
 }
 </script>
