@@ -10,32 +10,96 @@
 
 <h1 class="text-4xl font-bold mb-6">Poker</h1>
 
-<div class="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-3xl">
+<div class="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-4xl">
   <h2 class="text-2xl font-semibold mb-4">Jugadores y apuestas</h2>
-  <table class="w-full text-white mb-4 border-collapse border border-gray-500">
-    <thead>
-      <tr class="border-b border-gray-500">
-        <th class="p-2">Jugador</th>
-        <th class="p-2">Apuesta</th>
-      </tr>
-    </thead>
-    <tbody id="pokerTable">
-      <tr>
-        <td><input type="text" placeholder="Nombre" class="p-1 rounded bg-gray-700"></td>
-        <td><input type="number" placeholder="Apuesta" class="p-1 rounded bg-gray-700"></td>
-      </tr>
-    </tbody>
-  </table>
-  <button onclick="addRow()" class="bg-blue-600 p-2 rounded hover:bg-blue-700">Agregar jugador</button>
+  <div id="playersContainer" class="space-y-4">
+    <div class="flex gap-2 items-center">
+      <input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
+      <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">
+    </div>
+  </div>
+  <button onclick="addPlayer()" class="bg-blue-600 p-2 rounded hover:bg-blue-700 mt-2">Agregar jugador</button>
+  <button onclick="startPoker()" class="bg-green-600 p-3 rounded hover:bg-green-700 mt-4 w-full">Iniciar Juego</button>
 </div>
 
+<div id="gameResult" class="mt-6 text-center"></div>
+
 <script>
-function addRow(){
-  const table=document.getElementById("pokerTable");
-  const tr=document.createElement("tr");
-  tr.innerHTML=`<td><input type="text" placeholder="Nombre" class="p-1 rounded bg-gray-700"></td>
-                <td><input type="number" placeholder="Apuesta" class="p-1 rounded bg-gray-700"></td>`;
-  table.appendChild(tr);
+const suits=["♠","♥","♦","♣"];
+const values=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+let deck=[], players=[];
+
+function createDeck(){
+  deck=[];
+  for(let s of suits){
+    for(let v of values) deck.push({value:v,suit:s});
+  }
+  for(let i=deck.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]]=[deck[j],deck[i]];
+  }
+}
+
+function addPlayer(){
+  if(document.getElementById("playersContainer").children.length>=5) return alert("Máximo 5 jugadores");
+  const div=document.createElement("div");
+  div.className="flex gap-2 items-center";
+  div.innerHTML=`<input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
+                 <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">`;
+  document.getElementById("playersContainer").appendChild(div);
+}
+
+function dealHand(){
+  const hand=[];
+  for(let i=0;i<5;i++){
+    if(deck.length===0) createDeck();
+    hand.push(deck.pop());
+  }
+  return hand;
+}
+
+function handValue(hand){
+  // Valor muy básico: sumamos puntos por parejas, tríos o escalera simple
+  const vals = hand.map(c=>c.value);
+  const counts = {};
+  vals.forEach(v => counts[v] = (counts[v]||0)+1);
+  let score = 0;
+  for(let key in counts){
+    if(counts[key]===2) score+=2;
+    else if(counts[key]===3) score+=3;
+    else if(counts[key]===4) score+=4;
+  }
+  return score;
+}
+
+function startPoker(){
+  createDeck();
+  players=[];
+  const names=document.getElementsByClassName("playerName");
+  const bets=document.getElementsByClassName("playerBet");
+  for(let i=0;i<names.length;i++){
+    const name=names[i].value||`Jugador${i+1}`;
+    const bet=parseInt(bets[i].value)||100;
+    const hand=dealHand();
+    players.push({name:name, bet:bet, hand:hand});
+  }
+  showResult();
+}
+
+function showResult(){
+  let html="";
+  let bestScore=-1;
+  let winners=[];
+  players.forEach(p=>{
+    const score=handValue(p.hand);
+    if(score>bestScore){bestScore=score; winners=[p.name];}
+    else if(score===bestScore) winners.push(p.name);
+    html+=`<h2 class="text-xl font-semibold mt-2">${p.name} - Apuesta: $${p.bet}</h2>
+           <div class="flex gap-2 mb-2 mt-1">${p.hand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+           <p>Puntaje: ${score}</p>`;
+  });
+  html+=`<h2 class="text-2xl font-bold mt-4 text-green-400">Ganador(es): ${winners.join(", ")}</h2>`;
+  document.getElementById("gameResult").innerHTML=html;
 }
 </script>
 </body>
