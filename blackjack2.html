@@ -1,1 +1,105 @@
-(Aquí va el código completo de Blackjack 2 que ya te pasé antes)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack 2 - Los Blood Casino</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+
+<h1 class="text-4xl font-bold mb-6">Blackjack 2</h1>
+
+<div class="flex flex-col md:flex-row w-full max-w-6xl gap-6">
+
+  <div class="flex-1 bg-gray-800 p-6 rounded-xl shadow-lg">
+    <h2 class="text-2xl font-semibold mb-4">Jugadores y apuestas</h2>
+    <div id="playersList" class="space-y-4">
+      <div class="flex gap-2">
+        <input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
+        <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">
+      </div>
+    </div>
+    <button onclick="addPlayer()" class="w-full bg-blue-600 p-2 rounded hover:bg-blue-700 mt-2">Agregar jugador</button>
+    <button onclick="startGame()" class="w-full bg-green-600 p-3 rounded hover:bg-green-700 mt-4">Iniciar Juego</button>
+  </div>
+
+  <div class="flex-1 bg-gray-800 p-6 rounded-xl shadow-lg" id="gameContainer"></div>
+
+</div>
+
+<script>
+const suits=["♠","♥","♦","♣"];
+const values=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+let deck=[], players=[], dealerHand=[];
+
+function createDeck(){
+  deck=[];
+  for(let s of suits){
+    for(let v of values) deck.push({value:v,suit:s});
+  }
+  for(let i=deck.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]]=[deck[j],deck[i]];
+  }
+}
+
+function cardValue(card){
+  if(["J","Q","K"].includes(card.value)) return 10;
+  if(card.value==="A") return 11;
+  return parseInt(card.value);
+}
+
+function calculateScore(hand){
+  let score=hand.reduce((a,b)=>a+cardValue(b),0);
+  let aces=hand.filter(c=>c.value==="A").length;
+  while(score>21 && aces>0){score-=10; aces--;}
+  return score;
+}
+
+function addPlayer(){
+  const container=document.getElementById("playersList");
+  if(container.children.length>=5) return alert("Máximo 5 jugadores");
+  const div=document.createElement("div");
+  div.className="flex gap-2";
+  div.innerHTML=`<input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
+                   <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">`;
+  container.appendChild(div);
+}
+
+function startGame(){
+  players=[];
+  const names=document.getElementsByClassName("playerName");
+  const bets=document.getElementsByClassName("playerBet");
+  for(let i=0;i<names.length;i++){
+    const name=names[i].value||`Jugador${i+1}`;
+    const bet=parseInt(bets[i].value)||100;
+    players.push({name:name, bet:bet, hand:[deckPop(),deckPop()]});
+  }
+  dealerHand=[deckPop(),deckPop()];
+  showGame();
+}
+
+function deckPop(){
+  if(deck.length===0) createDeck();
+  return deck.pop();
+}
+
+function showGame(){
+  const container=document.getElementById("gameContainer");
+  let html="";
+  for(let p of players){
+    const score=calculateScore(p.hand);
+    html+=`<h2 class="text-xl font-semibold mb-2">${p.name}</h2>
+           <div class="flex space-x-2 mb-2">${p.hand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+           <p class="text-lg mb-2">Puntaje: ${score} - Apuesta: $${p.bet}</p>`;
+  }
+  const dealerScore=calculateScore(dealerHand);
+  html+=`<h2 class="text-xl font-semibold mb-2">Crupier</h2>
+         <div class="flex space-x-2 mb-2">${dealerHand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+         <p class="text-lg">Puntaje: ${dealerScore}</p>`;
+  container.innerHTML=html;
+}
+</script>
+</body>
+</html>
