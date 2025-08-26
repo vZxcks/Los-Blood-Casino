@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack - Los Blood Casino</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+
+  <h1 class="text-4xl font-bold mb-6">Blackjack 1</h1>
+
+  <div class="flex flex-col md:flex-row w-full max-w-6xl gap-6">
+
+    <div class="flex-1 bg-gray-800 p-6 rounded-xl shadow-lg">
+      <h2 class="text-2xl font-semibold mb-4">Jugador y apuesta</h2>
+      <label class="block mb-2">Nombre del jugador</label>
+      <input type="text" id="playerName" value="Jugador1" class="w-full p-2 rounded bg-gray-700 mb-4">
+      <label class="block mb-2">Monto de apuesta</label>
+      <input type="number" id="betAmount" value="100" class="w-full p-2 rounded bg-gray-700 mb-4">
+      <button onclick="startGame()" class="w-full bg-green-600 p-3 rounded-lg hover:bg-green-700 transition">Iniciar Juego</button>
+    </div>
+
+    <div class="flex-1 bg-gray-800 p-6 rounded-xl shadow-lg" id="gameContainer"></div>
+
+  </div>
+
+  <script>
+    const suits = ["♠","♥","♦","♣"];
+    const values = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+    let deck=[], playerHand=[], dealerHand=[];
+
+    function createDeck(){
+      deck=[];
+      for(let s of suits){
+        for(let v of values) deck.push({value:v,suit:s});
+      }
+      for(let i=deck.length-1;i>0;i--){
+        let j=Math.floor(Math.random()*(i+1));
+        [deck[i],deck[j]]=[deck[j],deck[i]];
+      }
+    }
+
+    function cardValue(card){
+      if(["J","Q","K"].includes(card.value)) return 10;
+      if(card.value==="A") return 11;
+      return parseInt(card.value);
+    }
+
+    function calculateScore(hand){
+      let score=hand.reduce((a,b)=>a+cardValue(b),0);
+      let aces=hand.filter(c=>c.value==="A").length;
+      while(score>21 && aces>0){score-=10; aces--;}
+      return score;
+    }
+
+    function startGame(){
+      createDeck();
+      playerHand=[deck.pop(),deck.pop()];
+      dealerHand=[deck.pop(),deck.pop()];
+      showGame();
+    }
+
+    function showGame(turnOver=false){
+      const container=document.getElementById("gameContainer");
+      const totalPlayer=calculateScore(playerHand);
+      const totalDealer=calculateScore(dealerHand);
+      let html=`<h2 class="text-xl font-semibold mb-2">Jugador: ${document.getElementById("playerName").value}</h2>
+      <div class="flex space-x-2 mb-2">${playerHand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+      <p class="text-lg mb-2">Puntaje: ${totalPlayer}</p>
+      <p class="text-lg mb-2 text-yellow-400">Apuesta: $${document.getElementById("betAmount").value}</p>`;
+
+      html+=turnOver?`<h2 class="text-xl font-semibold mb-2">Crupier</h2>
+      <div class="flex space-x-2 mb-2">${dealerHand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
+      <p class="text-lg">Puntaje: ${totalDealer}</p>`:
+      `<button onclick="hit()" class="bg-green-600 p-2 rounded m-2 hover:bg-green-700">Pedir</button>
+      <button onclick="stand()" class="bg-red-600 p-2 rounded m-2 hover:bg-red-700">Plantarse</button>`;
+
+      container.innerHTML=html;
+    }
+
+    function hit(){
+      playerHand.push(deck.pop());
+      if(calculateScore(playerHand)>21){stand();}
+      else{showGame();}
+    }
+
+    function stand(){
+      while(calculateScore(dealerHand)<17){dealerHand.push(deck.pop());}
+      showGame(true);
+      setTimeout(()=>{
+        const pScore=calculateScore(playerHand);
+        const dScore=calculateScore(dealerHand);
+        let msg="";
+        if(pScore>21) msg="Perdiste";
+        else if(dScore>21 || pScore>dScore) msg="Ganaste";
+        else if(pScore===dScore) msg="Empate";
+        else msg="Perdiste";
+        alert(msg);
+      },200);
+    }
+  </script>
+</body>
+</html>
