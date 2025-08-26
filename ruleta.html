@@ -7,20 +7,31 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 #wheel {
-  width: 300px;
-  height: 300px;
+  width: 400px;
+  height: 400px;
   border-radius: 50%;
-  border: 8px solid #fff;
   background-size: cover;
   margin: 0 auto 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 5px #000;
+  color: white;
 }
+.red { color: #FF4136; }
+.black { color: #111111; }
+.green { color: #2ECC40; }
 </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
 
 <h1 class="text-4xl font-bold mb-6">Ruleta</h1>
 
-<div id="wheel" style="background-image:url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Roulette_wheel.jpg/300px-Roulette_wheel.jpg');"></div>
+<div id="wheel" style="background-image:url('/mnt/data/images.jpg');">
+  ?
+</div>
 
 <div class="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-xl">
   <label class="block mb-2">Monto de apuesta:</label>
@@ -47,6 +58,12 @@ function spin(){
   if(r<0.02) result="verde";
   else if(r<0.51) result="rojo";
   else result="negro";
+
+  // Mostrar el color sobre la ruleta
+  const wheel=document.getElementById("wheel");
+  wheel.innerText=result.toUpperCase();
+  wheel.className=result;
+  wheel.style.backgroundImage="url('/mnt/data/images.jpg')";
 
   let winnings=0;
   if(chosen===result){
