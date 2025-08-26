@@ -5,29 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poker - Los Blood Casino</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+.card { background:white; color:black; padding:10px; border-radius:8px; font-weight:bold; }
+</style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
 
 <h1 class="text-4xl font-bold mb-6">Poker</h1>
 
-<div class="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-4xl">
+<div class="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-4xl mb-6">
   <h2 class="text-2xl font-semibold mb-4">Jugadores y apuestas</h2>
-  <div id="playersContainer" class="space-y-4">
+  <div id="playersList" class="space-y-4">
     <div class="flex gap-2 items-center">
       <input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
       <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">
     </div>
   </div>
   <button onclick="addPlayer()" class="bg-blue-600 p-2 rounded hover:bg-blue-700 mt-2">Agregar jugador</button>
-  <button onclick="startPoker()" class="bg-green-600 p-3 rounded hover:bg-green-700 mt-4 w-full">Iniciar Juego</button>
+  <button onclick="startGame()" class="bg-green-600 p-3 rounded hover:bg-green-700 mt-4 w-full">Iniciar Juego</button>
 </div>
 
-<div id="gameResult" class="mt-6 text-center"></div>
+<div id="gameContainer" class="w-full max-w-4xl"></div>
 
 <script>
 const suits=["♠","♥","♦","♣"];
 const values=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
-let deck=[], players=[];
+let deck=[], players=[], currentPlayer=0;
 
 function createDeck(){
   deck=[];
@@ -40,39 +43,21 @@ function createDeck(){
   }
 }
 
+function deckPop(){
+  if(deck.length===0) createDeck();
+  return deck.pop();
+}
+
 function addPlayer(){
-  if(document.getElementById("playersContainer").children.length>=5) return alert("Máximo 5 jugadores");
+  if(document.getElementById("playersList").children.length>=5) return alert("Máximo 5 jugadores");
   const div=document.createElement("div");
   div.className="flex gap-2 items-center";
   div.innerHTML=`<input type="text" placeholder="Nombre" class="p-2 rounded bg-gray-700 playerName">
                  <input type="number" placeholder="Apuesta" class="p-2 rounded bg-gray-700 playerBet">`;
-  document.getElementById("playersContainer").appendChild(div);
+  document.getElementById("playersList").appendChild(div);
 }
 
-function dealHand(){
-  const hand=[];
-  for(let i=0;i<5;i++){
-    if(deck.length===0) createDeck();
-    hand.push(deck.pop());
-  }
-  return hand;
-}
-
-function handValue(hand){
-  // Valor muy básico: sumamos puntos por parejas, tríos o escalera simple
-  const vals = hand.map(c=>c.value);
-  const counts = {};
-  vals.forEach(v => counts[v] = (counts[v]||0)+1);
-  let score = 0;
-  for(let key in counts){
-    if(counts[key]===2) score+=2;
-    else if(counts[key]===3) score+=3;
-    else if(counts[key]===4) score+=4;
-  }
-  return score;
-}
-
-function startPoker(){
+function startGame(){
   createDeck();
   players=[];
   const names=document.getElementsByClassName("playerName");
@@ -80,26 +65,63 @@ function startPoker(){
   for(let i=0;i<names.length;i++){
     const name=names[i].value||`Jugador${i+1}`;
     const bet=parseInt(bets[i].value)||100;
-    const hand=dealHand();
-    players.push({name:name, bet:bet, hand:hand});
+    const hand=[deckPop(),deckPop(),deckPop(),deckPop(),deckPop()];
+    players.push({name:name, bet:bet, hand:hand, finished:false});
   }
-  showResult();
+  currentPlayer=0;
+  showTurn();
 }
 
-function showResult(){
+function showTurn(){
+  const container=document.getElementById("gameContainer");
   let html="";
+  players.forEach((p,i)=>{
+    html+=`<h2 class="text-xl font-semibold mt-2">${p.name} - Apuesta: $${p.bet}</h2>`;
+    html+=`<div class="flex gap-2 mb-2 mt-1">${p.hand.map(c=>`<div class="card">${c.value}${c.suit}</div>`).join("")}</div>`;
+    if(i===currentPlayer && !p.finished){
+      html+=`<button onclick="stand()" class="bg-red-600 p-2 rounded m-2 hover:bg-red-700">Plantarse</button>`;
+    }
+  });
+  container.innerHTML=html;
+}
+
+function stand(){
+  players[currentPlayer].finished=true;
+  currentPlayer++;
+  if(currentPlayer>=players.length){
+    showWinners();
+  } else {
+    showTurn();
+  }
+}
+
+function handValue(hand){
+  // Solo para simplificar: puntaje = suma de valores, A=11, J/Q/K=10
+  let score=0;
+  hand.forEach(c=>{
+    if(c.value==="J"||c.value==="Q"||c.value==="K") score+=10;
+    else if(c.value==="A") score+=11;
+    else score+=parseInt(c.value);
+  });
+  return score;
+}
+
+function showWinners(){
   let bestScore=-1;
   let winners=[];
   players.forEach(p=>{
     const score=handValue(p.hand);
     if(score>bestScore){bestScore=score; winners=[p.name];}
     else if(score===bestScore) winners.push(p.name);
-    html+=`<h2 class="text-xl font-semibold mt-2">${p.name} - Apuesta: $${p.bet}</h2>
-           <div class="flex gap-2 mb-2 mt-1">${p.hand.map(c=>`<div class="bg-white text-black px-3 py-4 rounded-lg shadow-md font-bold">${c.value}${c.suit}</div>`).join("")}</div>
-           <p>Puntaje: ${score}</p>`;
+  });
+  const container=document.getElementById("gameContainer");
+  let html="";
+  players.forEach(p=>{
+    html+=`<h2 class="text-xl font-semibold mt-2">${p.name} - Apuesta: $${p.bet}</h2>`;
+    html+=`<div class="flex gap-2 mb-2 mt-1">${p.hand.map(c=>`<div class="card">${c.value}${c.suit}</div>`).join("")}</div>`;
   });
   html+=`<h2 class="text-2xl font-bold mt-4 text-green-400">Ganador(es): ${winners.join(", ")}</h2>`;
-  document.getElementById("gameResult").innerHTML=html;
+  container.innerHTML=html;
 }
 </script>
 </body>
